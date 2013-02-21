@@ -1,0 +1,13 @@
+#!/usr/bin/scracc
+
+int main()
+{
+  MkDir("/tmp/hello");
+  WriteFile("/tmp/hello/bello.txt", "hello bello"); // overwrite
+//  AppendFile("~/hello", "hi");
+  for (auto e : {1,2,3,4 } ) {
+    cout << e << endl;
+  }
+  cout << "hello! we are running!" << endl;
+  return 0;
+}
