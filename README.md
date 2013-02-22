@@ -1,7 +1,7 @@
 Scracc
 ========
 
-Scracc is a C++ Prototyping tool.
+Scracc is a C++ Prototyping Tool.
 
 Here is the idea:
 
@@ -22,14 +22,14 @@ Here is the idea:
 
         ./hello.scc
 
-Scracc automatically compiles the executable and runs it.
+How does it work?
+-------------------
+
+When you say ```./hello.scc```, Scracc automatically compiles the executable and runs it.
 
 Compilation happens only for the first time. Subsequent executions run a cached version of the executable.
 
 Recompilation happens only if you change the scc file, otherwise a cached version of the executable is run.
-
-Compilation
--------------
 
 The scracc file is compiled with gcc using C++11 features and it is linked against the libscracc library. The code in your scracc file is prepended by the following header for your convenience:
 
@@ -88,12 +88,41 @@ Here is a list of the currently provided funcions in the ```Scracc``` namespace:
                    bool followSymlink = false);
 
 
+Building Scracc
+-----------------
+
+Requirements
+
+* CMake
+* Boost Filesystem library
+* Crypto++ library
+
+On Ubuntu you can get these by:
+
+    sudo apt-get install cmake libcrypto++-dev libboost-filesystem-dev
+
+Simply clone and build.
+
+    $ git clone https://github.com/feher/scracc.git
+    $ cd scracc
+    $ mkdir build
+    $ cd build
+    $ cmake ../
+    $ make
+
+On Debian systems, after the above steps you can also build an installable deb package:
+
+    $ make package
+    $ sudo apt-get install ./*.deb
+
 
 Plans
 ------------
 
 * Add more convenience functions to to libscracc.
 * Allow linking with arbitrary libraries.
+* Allow multiple scracc files for a single build.
+  This would allow you to include several files into your scracc file. So you can split up your code to reasonable chunks.
 
 Enjoy!
 ------------
