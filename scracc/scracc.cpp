@@ -76,6 +76,8 @@ private:
     string mInputFilePathMd5;
     vector<string> mArgs;
 
+    void ShowHelp() const;
+    size_t ProcessCommandlineArguments(const vector<string> & args);
     void GenerateSourceCode(const string & inputFile = "", ofstream * ostr = nullptr);
     bool Compile();
     int  Run();
@@ -92,13 +94,16 @@ private:
 ///             args[N] are the command line arguments for the compiled source
 Builder::Builder(const vector<string> & args)
 {
-    if (args.size() < 1) {
+    auto processedArgCount = ProcessCommandlineArguments(args);
+    
+    if (args.size() - processedArgCount < 1) {
         throw runtime_error("Not enough arguments!");
     }
-    mArgs.assign(++(begin(args)), end(args));
 
-    mInputFilePath = Scracc::AbsolutePath(args[0]);
+    mInputFilePath = Scracc::AbsolutePath(args[processedArgCount]);
     mInputFileName = Scracc::BaseName(mInputFilePath);
+
+    mArgs.assign(begin(args) + processedArgCount + 1, end(args));
 
     auto homeDir = Scracc::GetEnv("HOME");
     mCacheDir = Scracc::AbsolutePath(string(homeDir) + "/.cache/scracc");
@@ -116,6 +121,39 @@ Builder::Builder(const vector<string> & args)
     // TODO: use only part of the MD5 here!
     mBuildDir = Scracc::BuildPath( { mCacheDir, mInputFilePathMd5 } );
     mBuildSrc = Scracc::BuildPath( { mBuildDir, mInputFileName + ".cc" } );
+}
+
+void Builder::ShowHelp() const
+{
+    cout << "Scracc is a C++ Prototyping tool." << endl;
+    cout << endl;
+    cout << "Usage: scracc options input-file input-file-args" << endl;
+    cout << endl;
+    cout << "options              Scracc specific options." << endl;
+    cout << "    --help           Print this help screen." << endl;
+    cout << endl;
+    cout << "input-file           The scc file you want to compile and run." << endl;
+    cout << "                     This argument cannot start with \"--\"!" << endl;
+    cout << "input-file-args      These will be passed to the input-file as command line arguments." << endl;
+    cout << endl;
+}
+
+size_t Builder::ProcessCommandlineArguments(const vector<string> & args)
+{
+    size_t i = 0;
+    for (i = 0; i < args.size(); ++i) {
+        if (args[i].find("--") != 0) {
+            break;
+        }
+        else if (args[i] == "--help") {
+            ShowHelp();
+            throw runtime_error("Help requested.");
+        }
+        else {
+            throw runtime_error(string("Unrecognized option: ") + args[i]);
+        }
+    }
+    return i;
 }
 
 void Builder::GenerateSourceCode(const string & inputFile, ofstream * ostr)
@@ -239,7 +277,7 @@ int main(int argc, char ** argv)
         ret = builder.BuildAndRun();
     }
     catch (runtime_error & e) {
-        cout << "FAILED: " << e.what() << endl;
+        cout << "STOPPED: " << e.what() << endl;
     }
     return ret;
 }
