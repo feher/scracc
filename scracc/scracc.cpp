@@ -75,6 +75,7 @@ private:
     string mInputFileContentMd5;
     string mInputFilePathMd5;
     bool mCleanSlate;
+    bool mRecompile;
     vector<string> mArgs;
 
     void ShowHelp() const;
@@ -95,6 +96,7 @@ private:
 ///             args[N] are the command line arguments for the compiled source
 Builder::Builder(const vector<string> & args)
     :  mCleanSlate (false)
+      ,mRecompile (false)
 {
     auto processedArgCount = ProcessCommandlineArguments(args);
     
@@ -134,6 +136,7 @@ void Builder::ShowHelp() const
     cout << "options              Scracc specific options." << endl;
     cout << "    --clean-slate    Do not inlude any headers by default." << endl;
     cout << "                     Do not define any default using directives." << endl;
+    cout << "    --recompile      Force recompilation of input-file." << endl;
     cout << "    --help           Print this help screen." << endl;
     cout << endl;
     cout << "input-file           The scc file you want to compile and run." << endl;
@@ -151,6 +154,9 @@ size_t Builder::ProcessCommandlineArguments(const vector<string> & args)
         }
         if (args[i] == "--clean-slate") {
             mCleanSlate = true;
+        }
+        else if (args[i] == "--recompile") {
+            mRecompile = true;
         }
         else if (args[i] == "--help") {
             ShowHelp();
@@ -262,7 +268,7 @@ bool Builder::Changed()
 
 int Builder::BuildAndRun()
 {
-    if (Changed()) {
+    if (mRecompile || Changed()) {
         RefreshCache();
     }
     return Run();
