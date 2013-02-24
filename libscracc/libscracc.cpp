@@ -222,7 +222,25 @@ string DirName(const string & filePath, bool * ok)
 
 string AbsolutePath(const string & relPath, bool * ok)
 {
+    bool success = true;
     string ret = absolute(path(relPath)).native();
+
+    // absolute() does not eliminate ".." directories.
+    // So, we have to do it ourselves.
+    // /a/b/../c --> /a/c
+    while (1) {
+        const auto dotdotPos = ret.find("/../");
+        if (dotdotPos == string::npos) {
+            break;
+        }
+        const auto prevDirPos = ret.find_last_of("/", dotdotPos - 1);
+        if (prevDirPos == string::npos) {
+            success = false;
+            SPP_FINISH_WITH_RET(string("Badly formatted path: ") + ret);
+        }
+        ret.erase(prevDirPos, dotdotPos + 3 - prevDirPos);
+    }
+
     SPP_EC_FINISH_WITH_RET();
 }
 
