@@ -1,12 +1,16 @@
-#!/usr/bin/scracc
+#!/usr/bin/scracc -n
 
-int main()
+int main(int argc, char ** argv)
 {
+  cout << "We are testing..." << endl;
+  for (int i = 0; i < argc; ++i) {
+    cout << argv[i] << endl;
+  }
   MkDir("/tmp/hello");
   WriteFile("/tmp/hello/bello.txt", "hello bello"); // overwrite
 //  AppendFile("~/hello", "hi");
   for (auto e : {1,2,3,4 } ) {
-    cout << e << endl;
+     cout << e << endl;
   }
   cout << "hello! we are running!" << endl;
   return 0;
