@@ -263,6 +263,7 @@ string AbsolutePath(const string & relPath, bool * ok)
 ///     { "/usr", "lib" }        "/usr/lib"
 ///     { "//usr/", "//lib/" }   "/usr/lib/"
 ///     { "usr", "lib/" }        "usr/lib/"
+///     { "/usr", "..", "lib" }  "/usr/../lib"
 ///
 /// @return The path.
 string BuildPath(initializer_list<string> parts)
