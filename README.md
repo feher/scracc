@@ -39,6 +39,14 @@ The scracc file is compiled with gcc using C++11 features and it is linked again
     using namespace Scracc;
     using namespace std;
 
+You can control where the output goes with the following environment variables:
+
+* ```SCRACC_CACHE_DIR```:
+  Directory used to store the cached files. If empty, ~/.cache/scracc is used.
+* ```SCRACC_BUILD_DIR```:
+  Directory used to store temporary files during the build process. If empty, ~/.cache/scracc is used.
+
+There are also some command line switches. Check out ```scracc --help```!
 
 Libscracc
 -----------
