@@ -241,6 +241,17 @@ string AbsolutePath(const string & relPath, bool * ok)
         ret.erase(prevDirPos, dotdotPos + 3 - prevDirPos);
     }
 
+    // absolute() does not eliminate "." directories.
+    // So, we have to do it ourselves.
+    // /a/b/./c --> /a/b/c
+    while (1) {
+        const auto dotPos = ret.find("/./");
+        if (dotPos == string::npos) {
+            break;
+        }
+        ret.erase(dotPos, 2);
+    }
+
     SPP_EC_FINISH_WITH_RET();
 }
 
