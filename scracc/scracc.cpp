@@ -27,6 +27,9 @@
 #include <boost/filesystem/operations.hpp> // absolute()
 #include <boost/filesystem.hpp>
 
+#include <iterator>  // istream_iterator
+#include <algorithm> // copy()
+#include <sstream>   // istringstream
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -296,8 +299,22 @@ int main(int argc, char ** argv)
 
     Scracc::SetThrowExceptions(true);
 
+    size_t i = 1;
     vector<string> args;
-    for (size_t i = 1; i < argc; ++i) {
+
+    // The arguments passed through shebang (aka #!) are in a single string.
+    // We have to spit it up.
+    if (argc > 1 && argv[1][0] == '-') {
+        auto arg = string(argv[1]);
+        istringstream iss(arg);
+        copy(istream_iterator<string>(iss),
+             istream_iterator<string>(),
+             back_inserter<vector<string> >(args));
+        ++i;
+    }
+
+    // The rest are OK.
+    for (; i < argc; ++i) {
         args.push_back(string(argv[i]));
     }
 
