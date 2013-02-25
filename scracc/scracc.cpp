@@ -106,6 +106,7 @@ private:
     string mCacheDir;
     string mCacheBin;
     string mCacheMd5;
+    string mCacheLoc;
     string mCacheSrc;
     string mBuildDir;
     string mBuildSrc;
@@ -114,6 +115,8 @@ private:
     string mInputFilePathMd5;
     bool mCleanSlate;
     bool mRecompile;
+    bool mDebug;
+    bool mNoCache;
     vector<string> mArgs;
 
     size_t ProcessCommandlineArguments(const vector<string> & args);
@@ -121,7 +124,7 @@ private:
     bool Compile();
     int  Run();
     void RefreshCache();
-    void CleanupCache();
+    void GarbageCollectCache();
     bool Changed();
 };
 
@@ -134,6 +137,8 @@ private:
 Builder::Builder(const vector<string> & args)
     :  mCleanSlate (false)
       ,mRecompile (false)
+      ,mDebug (false)
+      ,mNoCache (false)
 {
     auto processedArgCount = ProcessCommandlineArguments(args);
     
@@ -146,21 +151,41 @@ Builder::Builder(const vector<string> & args)
 
     mArgs.assign(begin(args) + processedArgCount + 1, end(args));
 
-    auto homeDir = Scracc::GetEnv("HOME");
-    mCacheDir = Scracc::AbsolutePath(string(homeDir) + "/.cache/scracc");
-    Scracc::MkDirPath(mCacheDir);
-
     mInputFileContentMd5 = Scracc::Md5Sum(Scracc::ReadFile(mInputFilePath));
     mInputFilePathMd5 = Scracc::Md5Sum(mInputFilePath);
     DEBUG(string("content md5 = ") + mInputFileContentMd5);
     DEBUG(string("path md5 = ") + mInputFilePathMd5);
 
-    mCacheBin = Scracc::BuildPath( { mCacheDir, mInputFilePathMd5 + ".bin" } );
-    mCacheMd5 = Scracc::BuildPath( { mCacheDir, mInputFilePathMd5 + ".md5" } );
-    mCacheSrc = Scracc::BuildPath( { mCacheDir, mInputFilePathMd5 + ".src" } );
+    bool scraccOk = true;
+    auto cacheDir = Scracc::GetEnv("SCRACC_CACHE_DIR", &scraccOk);
+    if (cacheDir.empty()) {
+        const auto homeDir = Scracc::GetEnv("HOME");
+        mCacheDir = Scracc::AbsolutePath(
+                                Scracc::BuildPath( { string(homeDir) ,
+                                                     ".cache/scracc",
+                                                     mInputFilePathMd5 } ) );
+    }
+    else {
+        mCacheDir = Scracc::AbsolutePath(
+                                Scracc::BuildPath( { cacheDir,
+                                                     mInputFilePathMd5 } ) );
+    }
 
-    // TODO: use only part of the MD5 here!
-    mBuildDir = Scracc::BuildPath( { mCacheDir, mInputFilePathMd5 } );
+    mCacheBin = Scracc::BuildPath( { mCacheDir, mInputFileName + ".bin" } );
+    mCacheMd5 = Scracc::BuildPath( { mCacheDir, mInputFileName + ".md5" } );
+    mCacheLoc = Scracc::BuildPath( { mCacheDir, mInputFileName + ".loc" } );
+    mCacheSrc = Scracc::BuildPath( { mCacheDir, mInputFileName + ".cc" } );
+
+    if (mDebug) {
+        mBuildDir = mCacheDir;
+    } else {
+        mBuildDir = Scracc::GetEnv("SCRACC_BUILD_DIR", &scraccOk);
+        if (mBuildDir.empty()) {
+            mBuildDir = mCacheDir;
+        } else {
+            mBuildDir = Scracc::BuildPath( { mBuildDir, mInputFilePathMd5 } );
+        }
+    }
     mBuildSrc = Scracc::BuildPath( { mBuildDir, mInputFileName + ".cc" } );
 }
 
@@ -168,16 +193,28 @@ size_t Builder::ProcessCommandlineArguments(const vector<string> & args)
 {
     size_t i = 0;
     for (i = 0; i < args.size(); ++i) {
-        if (args[i].find("--") != 0) {
+        if (args[i].find("-") != 0) {
             break;
         }
-        if (args[i] == "--clean-slate") {
+        if (args[i] == "-c" || args[i] == "--clean-slate") {
             mCleanSlate = true;
         }
-        else if (args[i] == "--recompile") {
+        else if (args[i] == "-r" || args[i] == "--recompile") {
             mRecompile = true;
         }
-        else if (args[i] == "--help") {
+        else if (args[i] == "-d" || args[i] == "--debug") {
+            if (mNoCache) {
+                throw runtime_error("-d and -n are mutually exclusive!");
+            }
+            mDebug = true;
+        }
+        else if (args[i] == "-n" || args[i] == "--nocache") {
+            if (mDebug) {
+                throw runtime_error("-d and -n are mutually exclusive!");
+            }
+            mNoCache = true;
+        }
+        else if (args[i] == "-h" || args[i] == "--help") {
             ShowHelp();
             throw runtime_error("Help requested.");
         }
@@ -232,6 +269,7 @@ void Builder::GenerateSourceCode(const string & inputFile, ofstream * ostr)
 
 bool Builder::Compile()
 {
+    Scracc::MkDirPath(mCacheDir);
     Scracc::MkDirPath(mBuildDir);
     const string curDir = Scracc::GetCwd();
     Scracc::ChDir(mBuildDir);
@@ -239,11 +277,14 @@ bool Builder::Compile()
     GenerateSourceCode();
 
     const string defaultLibs = mCleanSlate ? "" : " -lscracc";
-    const string cmd = "g++ -std=c++11 -o " + mCacheBin + " " + mBuildSrc + defaultLibs;
+    const string debugBuild = mDebug ? "-g" : "";
+    const string cmd = "g++ -std=c++11 " + debugBuild + " -o " + mCacheBin + " " + mBuildSrc + defaultLibs;
     DEBUG(string("comp cmd: ") + cmd);
-    const bool ok = (Scracc::Execute(cmd) == 0);
+    bool ok = (Scracc::Execute(cmd) == 0);
 
-    Scracc::RemoveAll(mBuildDir);
+    if (mBuildDir != mCacheDir) {
+        Scracc::RemoveAll(mBuildDir);
+    }
     Scracc::ChDir(curDir);
 
     return ok;
@@ -265,10 +306,10 @@ void Builder::RefreshCache()
         throw runtime_error("Compilation FAILED!");
     }
     Scracc::WriteFile(mCacheMd5, mInputFileContentMd5);
-    Scracc::WriteFile(mCacheSrc, mInputFilePath);
+    Scracc::WriteFile(mCacheLoc, mInputFilePath);
 }
 
-void Builder::CleanupCache()
+void Builder::GarbageCollectCache()
 {
 }
 
@@ -287,10 +328,19 @@ bool Builder::Changed()
 
 int Builder::BuildAndRun()
 {
-    if (mRecompile || Changed()) {
+    if (mNoCache || mRecompile || Changed()) {
         RefreshCache();
     }
-    return Run();
+    if (mDebug) {
+        assert(mCacheSrc == mBuildSrc);
+        cout << "SCRACC Executable: " << mCacheBin << endl;
+        cout << "SCRACC Source:     " << mCacheSrc << endl;
+    }
+    int ret = Run();
+    if (mNoCache) {
+        Scracc::RemoveAll(mCacheDir);
+    }
+    return ret;
 }
 
 int main(int argc, char ** argv)
