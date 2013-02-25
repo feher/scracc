@@ -19,9 +19,6 @@
 // Description:
 //
 
-// TODO:
-// o AbsolutePath() returns "/some/path/../hello" -> this is crap!
-
 #include "libscracc.h"
 
 #include <boost/filesystem/operations.hpp> // absolute()
