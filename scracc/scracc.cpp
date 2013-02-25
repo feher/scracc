@@ -48,6 +48,8 @@
 using namespace std;
 using namespace boost::filesystem;
 
+//####################################################################
+
 #define DO_DEBUG 0
 #if DO_DEBUG
 #define DEBUG(msg) \
@@ -57,6 +59,39 @@ using namespace boost::filesystem;
 #else
 #define DEBUG(msg)
 #endif
+
+//####################################################################
+
+namespace {
+
+void ShowHelp()
+{
+    cout << "This is Scracc v0.1.2." << endl;
+    cout << "Scracc is a C++ Prototyping tool." << endl;
+    cout << endl;
+    cout << "Usage: scracc options input-file input-file-args" << endl;
+    cout << endl;
+    cout << "options              Scracc specific options." << endl;
+    cout << "    -c | --clean-slate   Do not inlude any headers by default." << endl;
+    cout << "                         Do not define any default using directives." << endl;
+    cout << "    -r | --recompile     Force recompilation of input-file." << endl;
+    cout << "    -d | --debug         Compile with debug information." << endl;
+    cout << "                         This will use the cache directory for building," << endl;
+    cout << "                         ignoring the SCRACC_BUILD_DIR variable." << endl;
+    cout << "    -n | --nocache       Do not cache the compiled executable." << endl;
+    cout << "                         It also deletes any existing cached binaries." << endl;
+    cout << "    -h | --help          Print this help screen." << endl;
+    cout << "                     NOTE: -n and -d are mutually exclusive." << endl;
+    cout << endl;
+    cout << "input-file           The scc file you want to compile and run." << endl;
+    cout << "                     This argument cannot start with \"-\"!" << endl;
+    cout << "input-file-args      These will be passed to the input-file as command line arguments." << endl;
+    cout << endl;
+}
+
+} // namespace anonymous
+
+//####################################################################
 
 class Builder
 {
@@ -78,7 +113,6 @@ private:
     bool mRecompile;
     vector<string> mArgs;
 
-    void ShowHelp() const;
     size_t ProcessCommandlineArguments(const vector<string> & args);
     void GenerateSourceCode(const string & inputFile = "", ofstream * ostr = nullptr);
     bool Compile();
@@ -125,24 +159,6 @@ Builder::Builder(const vector<string> & args)
     // TODO: use only part of the MD5 here!
     mBuildDir = Scracc::BuildPath( { mCacheDir, mInputFilePathMd5 } );
     mBuildSrc = Scracc::BuildPath( { mBuildDir, mInputFileName + ".cc" } );
-}
-
-void Builder::ShowHelp() const
-{
-    cout << "Scracc is a C++ Prototyping tool." << endl;
-    cout << endl;
-    cout << "Usage: scracc options input-file input-file-args" << endl;
-    cout << endl;
-    cout << "options              Scracc specific options." << endl;
-    cout << "    --clean-slate    Do not inlude any headers by default." << endl;
-    cout << "                     Do not define any default using directives." << endl;
-    cout << "    --recompile      Force recompilation of input-file." << endl;
-    cout << "    --help           Print this help screen." << endl;
-    cout << endl;
-    cout << "input-file           The scc file you want to compile and run." << endl;
-    cout << "                     This argument cannot start with \"--\"!" << endl;
-    cout << "input-file-args      These will be passed to the input-file as command line arguments." << endl;
-    cout << endl;
 }
 
 size_t Builder::ProcessCommandlineArguments(const vector<string> & args)
