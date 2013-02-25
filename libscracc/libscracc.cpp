@@ -41,29 +41,37 @@
 //####################################################################
 
 #define SPP_EC_FINISH() \
-    if (sErrorCode && sThrowExceptions) { \
-        throw runtime_error(sErrorCode.message()); \
+    if (ok) { \
+        *ok = !sErrorCode; \
     } \
-    if (ok) *ok = !sErrorCode \
+    else if (sErrorCode && sThrowExceptions) { \
+        throw runtime_error(sErrorCode.message()); \
+    }
 
 #define SPP_EC_FINISH_WITH_RET() \
-    if (sErrorCode && sThrowExceptions) { \
+    if (ok) { \
+        *ok = !sErrorCode; \
+    } \
+    else if (sErrorCode && sThrowExceptions) { \
         throw runtime_error(sErrorCode.message()); \
     } \
-    if (ok) *ok = !sErrorCode; \
     return ret
 
 #define SPP_FINISH(msg) \
-    if (!success && sThrowExceptions) { \
-        throw runtime_error((msg)); \
+    if (ok) { \
+        *ok = success; \
     } \
-    if (ok) *ok = success \
+    else if (!success && sThrowExceptions) { \
+        throw runtime_error((msg)); \
+    }
 
 #define SPP_FINISH_WITH_RET(msg) \
-    if (!success && sThrowExceptions) { \
+    if (ok) { \
+        *ok = success; \
+    } \
+    else if (!success && sThrowExceptions) { \
         throw runtime_error((msg)); \
     } \
-    if (ok) *ok = success; \
     return ret
 
 //####################################################################
